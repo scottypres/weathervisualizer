@@ -187,19 +187,6 @@ async function getLatLongFromZip(zipCode) {
         latitude: data.places[0].latitude,
         longitude: data.places[0].longitude
     };
-    if (data && data.places && data.places.length > 0) {
-        // Save the coordinates to localStorage
-        localStorage.setItem('latitude', data.places[0].latitude);
-        localStorage.setItem('longitude', data.places[0].longitude);
-
-        return {
-            latitude: data.places[0].latitude,
-            longitude: data.places[0].longitude
-        };
-    } else {
-        // Handle cases where the zip code could not be converted to latitude/longitude
-        return null;
-    }
 }
 
 async function getWindSpeeds(latitude, longitude) {
@@ -513,7 +500,7 @@ function onWindDataReceived(windData) {
 
   
 }
-window.addEventListener('DOMContentLoaded', async (event) => {
+window.addEventListener('DOMContentLoaded', (event) => {
     const updateValueLabel = (inputId, valueId) => {
         const inputElement = document.getElementById(inputId);
         const valueElement = document.getElementById(valueId);
@@ -528,15 +515,6 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     updateValueLabel('redThreshold', 'redThresholdVal');
 
     // [...]
-    const latitude = localStorage.getItem('latitude');
-    const longitude = localStorage.getItem('longitude');
-
-    if (latitude && longitude) {
-        // If coordinates exist, get and display wind data
-        const windData = await getWindSpeeds(latitude, longitude);
-        window.currentWindData = windData;
-        onWindDataReceived(windData); // This function generates and displays the table
-    }
 });
 </script>
 </head>
