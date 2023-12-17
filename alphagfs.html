@@ -259,6 +259,15 @@ function hideConfigPopup() {
     document.getElementById('configOverlay').style.display = 'none';
 }
 
+function toggleTableVisibility() {
+    const tableContainer = document.getElementById('tableContainer');
+    if (tableContainer.style.display === 'none') {
+        tableContainer.style.display = 'block'; // If the table is hidden, show it
+    } else {
+        tableContainer.style.display = 'none'; // If the table is shown, hide it
+    }
+}
+
 // Function to save the thresholds to cookies
 
 
@@ -573,9 +582,8 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         <!-- The table will be dynamically inserted here via JavaScript -->
     </div>
     <p id="thresholdInfoText">Ground level is HRRR. All other levels are GFS.</p>
-    <button onclick="showConfigPopup()">Configure Thresholds</button>
-    <!-- Pop-up and overlay structures -->
-    <div class="overlay" id="configOverlay" onclick="hideConfigPopup()"></div>
+<button onclick="showConfigPopup()">Configure Thresholds</button>
+<button onclick="toggleTableVisibility()">ICON</button>
 <div class="popup" id="configPopup">
     <h3>Configure Thresholds</h3>
     <div>

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Collection</title>
+    <style>
+        /* Add a general header class to apply common header styles across tables */
+.column-header {
+    white-space: nowrap;
+    background-color: white;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Add a general data cell class to apply common data cell styles */
+.data-cell {
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.smalldate {
+    font-size: 10px;
+}
+      .small-font {
+    font-size: 16px;
+}
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .sticky-header {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 3;
+}
+
+
+       
+
+        .header h2 {
+    /* Sticky positioning here is unnecessary as .sticky-header class already makes the header stick */
+    margin: 0;
+    /* The position, top, and background-color properties should be removed from here */
+}
+/* Add these CSS styles */
+th.daylight {
+    border: 2px solid orange;
+}
+/* Updated CSS rule for first-column cells */
+table th:first-child,
+table td:first-child {
+    position: sticky;
+      left: 0;
+      background-color: white;
+      z-index: 2;
+      
+      min-width: 60px;
+      max-width: 120px;
+}
+
+th span {
+  font-size: 12px;
+}
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            
+        }
+        th, td {
+    min-width: 10px; /* Minimum width of cells */
+    max-width: 50px; /* Maximum width of cells */
+    border: 1px solid black;
+    padding: 1px;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    overflow: hidden; /* If content is too wide, it will be clipped */
+    text-overflow: ellipsis; /* If content is clipped, display an ellipsis ('...') */
+    white-space: nowrap; /* Keep text on the same line */
+}
+
+
+/* Updated CSS rule for first-column cells under `tbody` to inherit the width */
+td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: white;
+    z-index: 1;
+}
+        
+        td:not(:first-child) {
+    white-space: nowrap; /* Prevent text wrapping in the data cells */
+}
+th {
+    min-width: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+        .grey-bg {
+            /* Max grey level 75% */
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+    </style>
+</head>
+<body>
+    <button id="toggleButton">Toggle Wind/Clouds</button>
+    <!-- ICON Table -->
+
+
+    <!-- OpenMeteo Table -->
+    <table id="openmeteo-table">
+        <!-- The table will be populated by JavaScript -->
+    </table>
+
+    
+
+    <!-- GFS Table -->
+    <table id="gfs-table">
+        <!-- The table will be populated by JavaScript -->
+    </table>
+
+    <table id="icon-table">
+    <!-- The table will be populated by JavaScript -->
+</table>
+    </div>
+
+
+<script>
+    // Global variable to store weather data
+let globalWeatherData = {};
+// Function to convert hPa to feet
+
+function hPaToFeet(hPa) {
+    const conversionTable = {
+        1000: 110,
+        975: 320,
+        950: 500,
+        925: 800,
+        900: 1000,
+        850: 1500,
+        800: 1900,
+        700: 3000,
+        600: 4200,
+        500: 5600,
+        400: 7200
+    };
+
+    const meters = conversionTable[hPa];
+    const feet = meters * 3.28084; // Convert meters to feet
+    return Math.round(feet);
+}
+async function checkAndFetchData(baseUrl, model) {
+    const commonParameters = [
+        'temperature_2m',
+        'weather_code',
+        'dew_point_2m',
+        'cloud_cover',
+        'cloud_cover_low',
+        'cloud_cover_mid',
+        'cloud_cover_high',
+        'cloud_cover_1000hPa',
+        'cloud_cover_975hPa',
+        'cloud_cover_950hPa',
+        'cloud_cover_925hPa',
+        'cloud_cover_900hPa',
+        'cloud_cover_850hPa',
+        'cloud_cover_800hPa',
+        'cloud_cover_750hPa',
+        'cloud_cover_700hPa',
+        'cloud_cover_650hPa',
+        'cloud_cover_600hPa',
+        'cloud_cover_550hPa',
+        'cloud_cover_500hPa',
+        'cloud_cover_450hPa',
+        'cloud_cover_400hPa',
+        // Add new variables below
+        'wind_speed_10m',
+        'wind_speed_80m',
+        'wind_speed_180m',
+        'wind_direction_10m',
+        'wind_direction_80m',
+        'wind_direction_180m',
+        'temperature_1000hPa',
+        'temperature_975hPa',
+        'temperature_950hPa',
+        'temperature_925hPa',
+        'temperature_900hPa',
+        'temperature_850hPa',
+        'temperature_800hPa',
+        'temperature_700hPa',
+        'temperature_600hPa',
+        'temperature_500hPa',
+        'temperature_400hPa',
+        'windspeed_1000hPa',
+        'windspeed_975hPa',
+        'windspeed_950hPa',
+        'windspeed_925hPa',
+        'windspeed_900hPa',
+        'windspeed_850hPa',
+        'windspeed_800hPa',
+        'windspeed_700hPa',
+        'windspeed_600hPa',
+        'windspeed_500hPa',
+        'windspeed_400hPa',
+        'winddirection_1000hPa',
+        'winddirection_975hPa',
+        'winddirection_950hPa',
+        'winddirection_925hPa',
+        'winddirection_900hPa',
+        'winddirection_850hPa',
+        'winddirection_800hPa',
+        'winddirection_700hPa',
+        'winddirection_600hPa',
+        'winddirection_500hPa',
+        'winddirection_400hPa',
+        'cape'
+    ].join(',');
+
+    const location = {
+        latitude: 52.52,
+        longitude: 13.41
+    };
+    
+    const units = '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch';
+
+    // Combine base URL, location, parameters, and units into a single API call
+    try {
+        const response = await fetch(`${baseUrl}?latitude=${location.latitude}&longitude=${location.longitude}&hourly=${commonParameters}${units}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const weatherData = await response.json();
+        console.log(`Data fetched successfully for model "${model}":`, weatherData);
+
+        // Call createTable to populate the table with fetched data
+        // This assumes you have a corresponding table ID and data structure for the model
+        createTable(`${model.toLowerCase()}-table`, weatherData, model);
+        globalWeatherData[model] = weatherData; // Store fetched data using model as key
+    } catch (error) {
+        console.error(`Failed to fetch data for model "${model}":`, error);
+    }
+}
+
+// Initialize and fetch data for each model
+const baseUrls = {
+    openMeteo: 'https://api.open-meteo.com/v1/forecast',
+    gfs: 'https://api.open-meteo.com/v1/gfs',
+    icon: 'https://api.open-meteo.com/v1/dwd-icon'
+};
+
+for (const [model, baseUrl] of Object.entries(baseUrls)) {
+    checkAndFetchData(baseUrl, model).catch(error => {
+        console.error(`Failed to fetch data for model "${model}":`, error);
+    });
+}
+
+
+
+
+
+function createTable(tableId, weatherData, model) {
+    const altitudeLabels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400].reverse();
+    const timestamps = weatherData.hourly.time;
+    const dataTable = document.getElementById(tableId);
+
+    let tableHtml = `<tr><th>${model.replace('Meteo', '<br>Meteo')}</th>`;
+
+    // Add date headers
+    timestamps.forEach((timestamp, index) => {
+    const date = new Date(timestamp);
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2); // Use first two letters
+    const hour = date.getHours();
+    const hour12 = hour % 12 || 12; // Convert to 12-hour format
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+
+    // Add "daylight" class to header cells of daylight hours
+    const isDaylight = hour >= 6 && hour < 18;
+    const headerClass = isDaylight ? 'daylight' : '';
+
+    tableHtml += `<th class="column-header ${headerClass}">
+                    <span class="smalldate">${month}/${day}</span><br>
+                    <span class="small-font">${dayOfWeek}</span><br>
+                    <span class="small-font">${hour12}</span><br><span class="small-font">${ampm}</span>
+                  </th>`;
+});
+
+
+    tableHtml += '</tr>';
+
+    // Add rows for each altitude
+    altitudeLabels.forEach(hPa => {
+        const feet = hPaToFeet(hPa);
+        tableHtml += `<tr><th class="sticky-header">${feet} ft</th>`;
+        const cloudCoverKey = `cloud_cover_${hPa}hPa`;
+        weatherData.hourly[cloudCoverKey].forEach(cloudCover => {
+            tableHtml += `<td class="grey-bg" style="background-color: rgba(0, 0, 0, ${cloudCover * 0.75 / 100})"></td>`;
+        });
+        tableHtml += '</tr>';
+    });
+
+    dataTable.innerHTML = tableHtml;
+
+    // Add event listeners after the table has been populated
+    timestamps.forEach((timestamp, index) => {
+        const headerElement = dataTable.querySelector(`th:nth-child(${index + 2})`); // +2 to skip model header cell
+        if (headerElement) {
+            headerElement.addEventListener('click', () => {
+                displayDataAtIndex(weatherData, index);
+            });
+        }
+    });
+
+    dataTable.dataset.model = model;
+    console.log(`Listeners added for ${model} model`);
+}
+
+function displayDataAtIndex(weatherData, index) {
+    console.log('Index:', index);
+    console.log('weatherData at Index:', weatherData.hourly.time[index]);
+    console.log('Total Cloud Cover:', weatherData.hourly.cloud_cover[index]);
+    console.log('Low Cloud Cover:', weatherData.hourly.cloud_cover_low[index]);
+    
+    // Assuming these are the next properties you are trying to log
+    console.log('Mid Cloud Cover:', weatherData.hourly.cloud_cover_mid ? weatherData.hourly.cloud_cover_mid[index] : 'None');
+    console.log('High Cloud Cover:', weatherData.hourly.cloud_cover_high ? weatherData.hourly.cloud_cover_high[index] : 'None');
+    console.log('Temperature:', weatherData.hourly.temperature_2m ? weatherData.hourly.temperature_2m[index] : 'None');
+    console.log('Dewpoint:', weatherData.hourly.dew_point_2m ? weatherData.hourly.dew_point_2m[index] : 'None');
+    
+
+    // Now we handle any remaining code with access to the possibly undefined properties
+    const tempDewpointSpread = (weatherData.hourly.temperature_2m && weatherData.hourly.dew_point_2m)
+        ? (weatherData.hourly.temperature_2m[index] - weatherData.hourly.dew_point_2m[index])
+        : 'N/A';
+    console.log('Temp-Dewpoint Spread:', tempDewpointSpread);
+    // Add similar lines for cloud_cover_mid, cloud_cover_high, temperature_2m, dew_point_2m, visibility
+    const dataForTimestamp = {
+        totalCloudCover: weatherData.hourly.cloud_cover[index],
+        lowCloudCover: weatherData.hourly.cloud_cover_low[index],
+        midCloudCover: weatherData.hourly.cloud_cover_mid[index],
+        highCloudCover: weatherData.hourly.cloud_cover_high[index],
+        temperature: weatherData.hourly.temperature_2m[index],
+        dewpoint: weatherData.hourly.dew_point_2m[index],
+
+    };
+
+
+    
+    // Display the alert without visibility data for ICON model
+    alert(
+        `Timestamp: ${weatherData.hourly.time[index]}\n` +
+        `Total Cloud Cover: ${dataForTimestamp.totalCloudCover}%\n` +
+        `Low Cloud Cover: ${dataForTimestamp.lowCloudCover}%\n` +
+        `Mid Cloud Cover: ${dataForTimestamp.midCloudCover}%\n` +
+        `High Cloud Cover: ${dataForTimestamp.highCloudCover}%\n` +
+        `Temperature: ${dataForTimestamp.temperature}°\n` +
+        `Dewpoint: ${dataForTimestamp.dewpoint}°\n` +
+        `Temp-Dewpoint Spread: ${tempDewpointSpread}°\n` 
+        
+    );
+}
+document.getElementById('toggleButton').addEventListener('click', toggleWindClouds);
+document.getElementById('toggleButton').textContent = 'Show Winds'; // Default text
+function toggleWindClouds() {
+    const toggleButtonText = document.getElementById('toggleButton').textContent;
+    const showWinds = toggleButtonText === 'Show Winds';
+    Object.keys(globalWeatherData).forEach(model => {
+        const tableId = `${model.toLowerCase()}-table`;
+        const dataTable = document.getElementById(tableId);
+
+        if (showWinds) {
+            // Display wind data
+            fillTableWithWindSpeed(dataTable, globalWeatherData[model]);
+            dataTable.dataset.showing = 'winds';
+        } else {
+            // Display cloud cover data
+            fillTableWithCloudCover(dataTable, globalWeatherData[model]);
+            dataTable.dataset.showing = 'clouds';
+        }
+    });
+    document.getElementById('toggleButton').textContent = showWinds ? 'Show Clouds' : 'Show Winds';
+}
+function fillTableWithWindSpeed(table, weatherData) {
+    const altitudeLabels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400];
+    let tableHtml = '<tr>' + table.getElementsByTagName('tr')[0].innerHTML + '</tr>'; // Clone the existing header row
+
+    // Ensure altitudeLabels array is reversed for the wind speed table too
+    altitudeLabels.reverse().forEach(hPa => {
+        const windSpeedKey = `windspeed_${hPa}hPa`;
+        const windDirectionKey = `winddirection_${hPa}hPa`;
+        const feet = hPaToFeet(hPa);
+        tableHtml += `<tr><th class="sticky-header">${feet} ft</th>`;
+
+        if (weatherData.hourly.hasOwnProperty(windSpeedKey)) {
+            weatherData.hourly[windSpeedKey].forEach((windSpeed, index) => {
+                const roundedWindSpeed = windSpeed ? Math.round(windSpeed) : 'N/A'; // Round the wind speed value
+                const windDirection = weatherData.hourly[windDirectionKey][index];
+                const windDirectionArrow = getWindDirectionArrow(windDirection); // Generate arrow using actual function call
+                tableHtml += `<td class="data-cell">` +
+             `${roundedWindSpeed}` + // Use the rounded wind speed value
+             `<br><span>${windDirectionArrow}</span>` + // Add a line break before the arrow and display using innerHTML
+             `</td>`;
+            });
+            tableHtml += '</tr>';
+        } else {
+            console.error(`Wind speed data for ${hPa} hPa not found in weather data.`);
+            tableHtml += `<td colspan="${weatherData.hourly.time.length}" class="data-cell">Data not available</td></tr>`;
+        }
+    });
+
+    table.innerHTML = tableHtml; // Update the table with the new HTML
+}
+
+function fillTableWithCloudCover(table, weatherData) {
+    const model = table.dataset.model;
+    createTable(table.id, weatherData, model); // Reuse createTable function
+}
+// Initialize the tables to display clouds by default
+document.querySelectorAll('table[id$="-table"]').forEach(table => {
+    table.dataset.showing = 'clouds'; // Default view
+});
+// Function to convert degrees to Unicode arrows with text-style rendering
+function getWindDirectionArrow(degrees) {
+    if (typeof degrees === 'undefined' || degrees === null) {
+        return ''; // Return empty string if the direction is undefined or null
+    }
+    const arrows = {
+        N: '&#x2191;&#xFE0E;', // Upwards arrow
+        NE: '&#x2197;&#xFE0E;', // North East arrow
+        E: '&#x2192;&#xFE0E;', // Rightwards arrow
+        SE: '&#x2198;&#xFE0E;', // South East arrow
+        S: '&#x2193;&#xFE0E;', // Downwards arrow
+        SW: '&#x2199;&#xFE0E;', // South West arrow
+        W: '&#x2190;&#xFE0E;', // Leftwards arrow
+        NW: '&#x2196;&#xFE0E;'  // North West arrow
+    };
+
+    // Convert the degrees to an arrow string with the given mapping
+    const directions = [
+        { direction: 'N', range: [337.5, 360], rangeStart: [0, 22.5] },
+        { direction: 'NE', range: [22.5, 67.5] },
+        { direction: 'E', range: [67.5, 112.5] },
+        { direction: 'SE', range: [112.5, 157.5] },
+        { direction: 'S', range: [157.5, 202.5] },
+        { direction: 'SW', range: [202.5, 247.5] },
+        { direction: 'W', range: [247.5, 292.5] },
+        { direction: 'NW', range: [292.5, 337.5] }
+    ];
+
+    for (let i = 0; i < directions.length; i++) {
+        const { direction, range, rangeStart } = directions[i];
+        if ((degrees >= range[0] && degrees < range[1]) || (rangeStart && degrees >= rangeStart[0] && degrees < rangeStart[1])) {
+            return arrows[direction]; // Return the Unicode arrow character for the direction
+        }
+    }
+    return ''; // Return empty string if the direction does not fall within known ranges
+}
+// Set the correct initial text for the toggle button
+document.getElementById('toggleButton').textContent = 'Show Winds'; // Initial text
+</script>
+</body>
+</html>

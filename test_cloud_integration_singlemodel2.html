@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Collection</title>
     <style>
+        .cloud-text-small {
+    font-size: 0.7em; /* Adjust the size as required */
+}
       .small-font {
     font-size: 12px;
 }
@@ -81,6 +84,25 @@ th span {
     </style>
 </head>
 <body>
+    <!-- Wind Tables (initially hidden) -->
+<div id="windTables" style="display: none;">
+    <!-- OpenMeteo Wind Table -->
+    <table id="openmeteo-wind-table">
+        <!-- The table will be populated by JavaScript -->
+    </table>
+
+    <br>
+    <!-- GFS Wind Table -->
+    <table id="gfs-wind-table">
+        <!-- The table will be populated by JavaScript -->
+    </table>
+    <br>
+    <!-- ICON Wind Table -->
+    <table id="icon-wind-table">
+        <!-- The table will be populated by JavaScript -->
+    </table>
+</div>
+    <button id="toggleWind">Winds</button>
     <!-- ICON Table -->
 
 
@@ -90,17 +112,17 @@ th span {
     </table>
 
     
-
+<br>
     <!-- GFS Table -->
     <table id="gfs-table">
         <!-- The table will be populated by JavaScript -->
     </table>
-
+    <br>
     <table id="icon-table">
     <!-- The table will be populated by JavaScript -->
 </table>
     </div>
-
+<br>
 
 <script>
 // Function to convert hPa to feet
@@ -125,7 +147,7 @@ function hPaToFeet(hPa) {
     return Math.round(feet);
 }
 async function checkAndFetchData(baseUrl, model) {
-    const commonParameters = [
+    const commonParameters = [ 'wind_speed_10m',
         'temperature_2m',
         'weather_code',
         'dew_point_2m',
@@ -147,7 +169,7 @@ async function checkAndFetchData(baseUrl, model) {
         'cloud_cover_550hPa',
         'cloud_cover_500hPa',
         'cloud_cover_450hPa',
-        'cloud_cover_400hPa'
+        'cloud_cover_400hPa', 'wind_speed_10m' // Add wind speed parameter
     ].join(',');
 
     const location = {
@@ -169,6 +191,10 @@ async function checkAndFetchData(baseUrl, model) {
         // Call createTable to populate the table with fetched data
         // This assumes you have a corresponding table ID and data structure for the model
         createTable(`${model.toLowerCase()}-table`, weatherData, model);
+        createTable(`${model.toLowerCase()}-table`, weatherData, model, 'cloud');
+// Call createTable twice: once for the cloud table, once for the wind table
+createTable(`${model.toLowerCase()}-table`, weatherData, model, 'cloud');
+        createTable(`${model.toLowerCase()}-wind-table`, weatherData, model, 'wind');
 
     } catch (error) {
         console.error(`Failed to fetch data for model "${model}":`, error);
@@ -182,6 +208,7 @@ const baseUrls = {
     icon: 'https://api.open-meteo.com/v1/dwd-icon'
 };
 
+// We loop over the same base URLs since we're adding wind data to the common parameters
 for (const [model, baseUrl] of Object.entries(baseUrls)) {
     checkAndFetchData(baseUrl, model).catch(error => {
         console.error(`Failed to fetch data for model "${model}":`, error);
@@ -189,31 +216,35 @@ for (const [model, baseUrl] of Object.entries(baseUrls)) {
 }
 
 
-function getArrowUnicodeFromDirection(direction) {
-    if (direction >= 337.5 || direction < 22.5) {
-        return '&#x2191;&#xFE0E;'; // North as text
-    } else if (direction >= 22.5 && direction < 67.5) {
-        return '&#x2197;&#xFE0E;'; // North-East as text
-    } else if (direction >= 67.5 && direction < 112.5) {
-        return '&#x2192;&#xFE0E;'; // East as text
-    } else if (direction >= 112.5 && direction < 157.5) {
-        return '&#x2198;&#xFE0E;'; // South-East as text
-    } else if (direction >= 157.5 && direction < 202.5) {
-        return '&#x2193;&#xFE0E;'; // South as text
-    } else if (direction >= 202.5 && direction < 247.5) {
-        return '&#x2199;&#xFE0E;'; // South-West as text
-    } else if (direction >= 247.5 && direction < 292.5) {
-        return '&#x2190;&#xFE0E;'; // West as text
+
+
+document.getElementById('toggleWind').addEventListener('click', function() {
+    // Get references to the cloud tables and the wind data div
+    var cloudTables = document.querySelectorAll('[id$="-table"]');
+    var windTablesDiv = document.getElementById('windTables');
+
+    // Check which tables are currently displayed and toggle visibility
+    if (windTablesDiv.style.display === 'none') {
+        // Show wind tables and hide cloud tables
+        windTablesDiv.style.display = 'block';
+        cloudTables.forEach(function(table) {
+            table.style.display = 'none';
+        });
     } else {
-        return '&#x2196;&#xFE0E;'; // North-West as text
+        // Hide wind tables and show cloud tables
+        windTablesDiv.style.display = 'none';
+        cloudTables.forEach(function(table) {
+            table.style.display = 'table';
+        });
     }
-}
+});
 
-
-function createTable(tableId, weatherData, model) {
+function createTable(tableId, weatherData, model, dataType) {
+    const dataTable = document.getElementById(tableId);
     const altitudeLabels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400];
     const timestamps = weatherData.hourly.time;
     const dataTable = document.getElementById(tableId);
+    if (!dataTable) return; // Exit early if tableId doesn't exist
 
     let tableHtml = `<tr><th>${model}</th>`;
 
@@ -237,30 +268,37 @@ function createTable(tableId, weatherData, model) {
                         ${dayOfWeek}<br>${hour12}<br>${ampm}
                       </th>`;
 });
-    tableHtml += '</tr>';
+tableHtml += '</tr>';
 
-    // Add rows for each altitude
-    // Add rows for each altitude
-    altitudeLabels.reverse().forEach(hPa => {
-        const feet = hPaToFeet(hPa);
-        tableHtml += `<tr><th>${feet} ft</th>`;
-        // Add existing cell generation code for cloud coverage here for each altitude level
-
-        // Loop for wind direction (if your data has this field) for each timestamp
-        timestamps.forEach((_, index) => { // 'index' added so we know which column to use
-            // Only compute wind arrow if wind_direction array exists
-            if (weatherData.hourly.wind_direction) {
-                const direction = weatherData.hourly.wind_direction[index];
-                // Call your function to convert the wind direction into an arrow unicode
-                const windArrow = getArrowUnicodeFromDirection(direction);
-                // Include the arrow in the table cell
-                tableHtml += `<td>${windArrow}</td>`;
-            }
+// Add rows for each altitude
+altitudeLabels.reverse().forEach(hPa => {
+    const feet = hPaToFeet(hPa);
+    tableHtml += `<tr><th>${feet} ft</th>`;
+    const cloudCoverKey = `cloud_cover_${hPa}hPa`;
+    weatherData.hourly[cloudCoverKey].forEach(cloudCover => {
+        const textColor = cloudCover > 50 ? 'white' : 'black'; // White text for dark backgrounds, black for light
+            tableHtml += `<td class="grey-bg" style="background-color: rgba(0, 0, 0, ${cloudCover * 0.75 / 100}); color: ${textColor};"><span class="cloud-text-small">${cloudCover}%</span></td>`;
         });
 
         tableHtml += '</tr>';
     });
-
+       // Initialize tableHtml with headers or whatever your initial HTML should be
+       let tableHtml = '...';
+    dataType
+    
+    if (dataType === 'cloud') {
+        // ... existing code for cloud cover goes here ...
+    } else if (dataType === 'wind') {
+        // Specific code to populate wind tables goes here
+        altitudeLabels.reverse().forEach(hPa => {
+            const feet = hPaToFeet(hPa);
+            tableHtml += `<tr><th>${feet} ft</th>`;
+            weatherData.hourly['wind_speed_10m'].forEach(windSpeed => {
+                tableHtml += `<td>${windSpeed} mph</td>`; // Change to the unit of measure if necessary
+            });
+            tableHtml += '</tr>';
+        });
+    }
     dataTable.innerHTML = tableHtml;
     // Add event listeners after the table has been created
     timestamps.forEach((timestamp, index) => {

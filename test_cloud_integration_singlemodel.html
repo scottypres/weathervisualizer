@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Collection</title>
     <style>
+        .cloud-text-small {
+    font-size: 0.7em; /* Adjust the size as required */
+}
       .small-font {
     font-size: 12px;
 }
@@ -90,17 +93,17 @@ th span {
     </table>
 
     
-
+<br>
     <!-- GFS Table -->
     <table id="gfs-table">
         <!-- The table will be populated by JavaScript -->
     </table>
-
+    <br>
     <table id="icon-table">
     <!-- The table will be populated by JavaScript -->
 </table>
     </div>
-
+<br>
 
 <script>
 // Function to convert hPa to feet
@@ -189,25 +192,7 @@ for (const [model, baseUrl] of Object.entries(baseUrls)) {
 }
 
 
-function getArrowUnicodeFromDirection(direction) {
-    if (direction >= 337.5 || direction < 22.5) {
-        return '&#x2191;&#xFE0E;'; // North as text
-    } else if (direction >= 22.5 && direction < 67.5) {
-        return '&#x2197;&#xFE0E;'; // North-East as text
-    } else if (direction >= 67.5 && direction < 112.5) {
-        return '&#x2192;&#xFE0E;'; // East as text
-    } else if (direction >= 112.5 && direction < 157.5) {
-        return '&#x2198;&#xFE0E;'; // South-East as text
-    } else if (direction >= 157.5 && direction < 202.5) {
-        return '&#x2193;&#xFE0E;'; // South as text
-    } else if (direction >= 202.5 && direction < 247.5) {
-        return '&#x2199;&#xFE0E;'; // South-West as text
-    } else if (direction >= 247.5 && direction < 292.5) {
-        return '&#x2190;&#xFE0E;'; // West as text
-    } else {
-        return '&#x2196;&#xFE0E;'; // North-West as text
-    }
-}
+
 
 
 function createTable(tableId, weatherData, model) {
@@ -237,25 +222,16 @@ function createTable(tableId, weatherData, model) {
                         ${dayOfWeek}<br>${hour12}<br>${ampm}
                       </th>`;
 });
-    tableHtml += '</tr>';
+tableHtml += '</tr>';
 
-    // Add rows for each altitude
-    // Add rows for each altitude
-    altitudeLabels.reverse().forEach(hPa => {
-        const feet = hPaToFeet(hPa);
-        tableHtml += `<tr><th>${feet} ft</th>`;
-        // Add existing cell generation code for cloud coverage here for each altitude level
-
-        // Loop for wind direction (if your data has this field) for each timestamp
-        timestamps.forEach((_, index) => { // 'index' added so we know which column to use
-            // Only compute wind arrow if wind_direction array exists
-            if (weatherData.hourly.wind_direction) {
-                const direction = weatherData.hourly.wind_direction[index];
-                // Call your function to convert the wind direction into an arrow unicode
-                const windArrow = getArrowUnicodeFromDirection(direction);
-                // Include the arrow in the table cell
-                tableHtml += `<td>${windArrow}</td>`;
-            }
+// Add rows for each altitude
+altitudeLabels.reverse().forEach(hPa => {
+    const feet = hPaToFeet(hPa);
+    tableHtml += `<tr><th>${feet} ft</th>`;
+    const cloudCoverKey = `cloud_cover_${hPa}hPa`;
+    weatherData.hourly[cloudCoverKey].forEach(cloudCover => {
+        const textColor = cloudCover > 50 ? 'white' : 'black'; // White text for dark backgrounds, black for light
+            tableHtml += `<td class="grey-bg" style="background-color: rgba(0, 0, 0, ${cloudCover * 0.75 / 100}); color: ${textColor};"><span class="cloud-text-small">${cloudCover}%</span></td>`;
         });
 
         tableHtml += '</tr>';

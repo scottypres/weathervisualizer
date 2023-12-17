@@ -316,17 +316,10 @@ function createTable(windData) {
     const headerCell = document.createElement('th');
     headerCell.innerHTML = `<span class="small-font">${month}/${day}</span><br>` + // Add the date with smaller font size
                            `${dayOfWeek}<br>${formattedHours} <br>${ampm}`;
-      const precipitationProbability = windData.hourly.precipitation_probability[columnIndex];
-    const numberOfRowsToDraw = Math.floor(precipitationProbability / 9); // Example: 44% gives 4 rows to draw
+      //const precipitationProbability = windData.hourly.precipitation_probability[columnIndex];
+   // const numberOfRowsToDraw = Math.floor(precipitationProbability / 9); // Example: 44% gives 4 rows to draw
 
-    // Draw vertical borders around times of day when it's going to rain
-    if (numberOfRowsToDraw > 0) {
-        const percentageIndices = Array.from({ length: numberOfRowsToDraw }, (_, i) => i + 1);
-        percentageIndices.forEach((rowIndex) => {
-            // We will use an attribute to store information about which columns to border later
-            headerCell.setAttribute(`data-rain-border-row-${rowIndex}`, 'true'); 
-        });
-    }
+   
 
      if (isDaylight) {
         headerCell.classList.add('daylight'); // Add the 'daylight' class if it's within daylight hours
@@ -382,10 +375,7 @@ windSpeedCell.style.color = textColor;
        // } else {
        //     windSpeedCell.classList.add('red');
        // }
-              if (headerRow.cells[columnIndex + 1].hasAttribute(`data-rain-border-row-${altitudeIndex + 1}`)) {
-            windSpeedCell.style.borderLeft = '2px solid blue';
-            windSpeedCell.style.borderRight = '2px solid blue';
-        }
+           
     });}
 
         table.appendChild(row);
