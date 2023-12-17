@@ -185,7 +185,9 @@ async function getLatLongFromZip(zipCode) {
     const data = await response.json();
     return {
         latitude: data.places[0].latitude,
-        longitude: data.places[0].longitude
+        longitude: data.places[0].longitude,
+        city: data.places[0]['place name'],  // Retrieve the city name
+        state: data.places[0]['state']       // Retrieve the state name
     };
 }
 
@@ -482,7 +484,13 @@ function flipTableRows(table) {
 }
 async function handleZipCode() {
     const zipCode = document.getElementById('zipCodeInput').value;
-    const { latitude, longitude } = await getLatLongFromZip(zipCode);
+    const { latitude, longitude, city, state } = await getLatLongFromZip(zipCode);
+      // Store latitude and longitude in localStorage
+    localStorage.setItem('latitude', latitude);
+    localStorage.setItem('longitude', longitude);
+    localStorage.setItem('city', city);
+    localStorage.setItem('state', state);
+    updateLocationDisplay(city, state);
     const windData = await getWindSpeeds(latitude, longitude);
     window.currentWindData = windData;
     const table = createTable(windData);
@@ -490,6 +498,12 @@ async function handleZipCode() {
     const tableContainer = document.getElementById('tableContainer');
     tableContainer.innerHTML = ''; // Clear any existing content
     tableContainer.appendChild(table); // Append the new table
+}
+
+// New function to update the location display
+function updateLocationDisplay(city, state) {
+    const locationDisplay = document.getElementById('locationDisplay');
+    locationDisplay.textContent = `Weather for ${city}, ${state}`;
 }
 
 function onWindDataReceived(windData) {
@@ -500,15 +514,26 @@ function onWindDataReceived(windData) {
 
   
 }
-window.addEventListener('DOMContentLoaded', (event) => {
-    const updateValueLabel = (inputId, valueId) => {
-        const inputElement = document.getElementById(inputId);
-        const valueElement = document.getElementById(valueId);
+window.addEventListener('DOMContentLoaded', async (event) => {
+    const latitude = localStorage.getItem('latitude');
+    const longitude = localStorage.getItem('longitude');
+    const city = localStorage.getItem('city');
+    const state = localStorage.getItem('state');
 
-        
+    // Update the location display if the city and state are available
+    if (city && state) {
+        updateLocationDisplay(city, state);
+    }
+    // Check if both latitude and longitude are available
+    if (latitude && longitude) {
+        const windData = await getWindSpeeds(latitude, longitude);
+        window.currentWindData = windData;
+        const table = createTable(windData);
 
-        
-    };
+        const tableContainer = document.getElementById('tableContainer');
+        tableContainer.innerHTML = ''; // Clear any existing content
+        tableContainer.appendChild(table); // Append the new table
+    }
 
     updateValueLabel('blueThreshold', 'blueThresholdVal');
     updateValueLabel('greenThreshold', 'greenThresholdVal');
@@ -522,6 +547,9 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
     Enter ZIP code: <input type="text" id="zipCodeInput" />
     <button onclick="handleZipCode()">Get Winds</button>
+    <div id="locationDisplay" class="location-info">
+        <!-- City and state will be displayed here -->
+    </div>
     <div id="tableContainer" class="table-scrollable">
         <!-- The table will be dynamically inserted here via JavaScript -->
     </div>
