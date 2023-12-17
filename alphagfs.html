@@ -150,6 +150,14 @@ let blueThresholdValue = parseInt(localStorage.getItem('blueThreshold') || 4);
 let greenThresholdValue = parseInt(localStorage.getItem('greenThreshold') || 12);
 let redThresholdValue = parseInt(localStorage.getItem('redThreshold') || 20);
 
+function updateLocationDisplay(city, state) {
+    const cityDisplay = document.getElementById('cityDisplay');
+    const stateDisplay = document.getElementById('stateDisplay');
+    
+    cityDisplay.textContent = city;
+    stateDisplay.textContent = state;
+}
+
 // Function to save the thresholds to cookies and update global variables
 function saveThresholds() {
     const blueThreshold = document.getElementById('blueThreshold').value;
@@ -181,25 +189,30 @@ function saveThresholds() {
 }
 async function getLatLongFromZip(zipCode) {
     const url = `https://api.zippopotam.us/us/${zipCode}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return {
-        latitude: data.places[0].latitude,
-        longitude: data.places[0].longitude,
-        city: data.places[0]['place name'],  // Retrieve the city name
-        state: data.places[0]['state']       // Retrieve the state name
-    };
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Location information not found for the provided ZIP code.');
+        }
+
+        const data = await response.json();
+        return {
+            latitude: data.places[0].latitude,
+            longitude: data.places[0].longitude,
+            city: data.places[0]['place name'], // The 'place name' field contains the city name
+            state: data.places[0]['state']       // The 'state' field contains the state name
+        };
+    } catch (error) {
+        console.error('Error retrieving location data:', error);
+        // You may want to handle the error appropriately in your UI as well
+        alert('Failed to retrieve location information for the ZIP code provided.');
+        return {}; // Return an empty object to prevent further execution with undefined values
+    }
 }
 
 async function getWindSpeeds(latitude, longitude) {
     const url = `https://api.open-meteo.com/v1/gfs?latitude=${latitude}&longitude=${longitude}` +
-                `&hourly=temperature_2m,precipitation_probability,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,wind_gusts_10m,` +
-                `wind_speed_10m,wind_speed_80m,wind_direction_10m,wind_direction_80m,temperature_80m,temperature_1000hPa,temperature_975hPa,` +
-                `temperature_950hPa,temperature_925hPa,temperature_900hPa,temperature_850hPa,temperature_800hPa,` +
-                `windspeed_1000hPa,windspeed_975hPa,windspeed_950hPa,windspeed_925hPa,windspeed_900hPa,windspeed_850hPa,` +
-                `windspeed_800hPa,winddirection_1000hPa,winddirection_975hPa,winddirection_950hPa,winddirection_925hPa,` +
-                `winddirection_900hPa,winddirection_850hPa,winddirection_800hPa` +
-                `&daily=sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&forecast_days=16`;
+                `&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,precipitation_probability,weather_code,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,wind_speed_10m,wind_speed_80m,wind_speed_180m,wind_direction_10m,wind_direction_80m,wind_direction_180m,wind_gusts_10m,temperature_80m,temperature_180m,temperature_1000hPa,temperature_975hPa,temperature_950hPa,temperature_925hPa,temperature_900hPa,temperature_850hPa,temperature_800hPa,temperature_700hPa,temperature_600hPa,cloud_cover_1000hPa,cloud_cover_975hPa,cloud_cover_950hPa,cloud_cover_925hPa,cloud_cover_900hPa,cloud_cover_850hPa,cloud_cover_800hPa,cloud_cover_700hPa,cloud_cover_600hPa,windspeed_1000hPa,windspeed_975hPa,windspeed_950hPa,windspeed_925hPa,windspeed_900hPa,windspeed_850hPa,windspeed_800hPa,windspeed_700hPa,windspeed_600hPa,winddirection_1000hPa,winddirection_975hPa,winddirection_950hPa,winddirection_925hPa,winddirection_900hPa,winddirection_850hPa,winddirection_800hPa,winddirection_700hPa,winddirection_600hPa,cape&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&forecast_days=14`;
     const response = await fetch(url);
     return response.json();
 }
@@ -484,26 +497,29 @@ function flipTableRows(table) {
 }
 async function handleZipCode() {
     const zipCode = document.getElementById('zipCodeInput').value;
-    const { latitude, longitude, city, state } = await getLatLongFromZip(zipCode);
-      // Store latitude and longitude in localStorage
-    localStorage.setItem('latitude', latitude);
-    localStorage.setItem('longitude', longitude);
-    localStorage.setItem('city', city);
-    localStorage.setItem('state', state);
-    updateLocationDisplay(city, state);
-    const windData = await getWindSpeeds(latitude, longitude);
-    window.currentWindData = windData;
-    const table = createTable(windData);
+    try {
+        const { latitude, longitude, city, state } = await getLatLongFromZip(zipCode);
+        
+        // Store latitude, longitude, city, and state in localStorage
+        localStorage.setItem('latitude', latitude);
+        localStorage.setItem('longitude', longitude);
+        localStorage.setItem('city', city);
+        localStorage.setItem('state', state);
+        
+        // Update the location display using the new function provided earlier
+        updateLocationDisplay(city, state);
 
-    const tableContainer = document.getElementById('tableContainer');
-    tableContainer.innerHTML = ''; // Clear any existing content
-    tableContainer.appendChild(table); // Append the new table
-}
+        const windData = await getWindSpeeds(latitude, longitude);
+        window.currentWindData = windData;
+        const table = createTable(windData);
 
-// New function to update the location display
-function updateLocationDisplay(city, state) {
-    const locationDisplay = document.getElementById('locationDisplay');
-    locationDisplay.textContent = `Weather for ${city}, ${state}`;
+        const tableContainer = document.getElementById('tableContainer');
+        tableContainer.innerHTML = ''; // Clear any existing content
+        tableContainer.appendChild(table); // Append the new table
+        
+    } catch (error) {
+        // The error logging and alert are now handled inside getLatLongFromZip
+    }
 }
 
 function onWindDataReceived(windData) {
@@ -514,12 +530,16 @@ function onWindDataReceived(windData) {
 
   
 }
+
 window.addEventListener('DOMContentLoaded', async (event) => {
     const latitude = localStorage.getItem('latitude');
     const longitude = localStorage.getItem('longitude');
     const city = localStorage.getItem('city');
     const state = localStorage.getItem('state');
-
+    const updateValueLabel = (inputId, valueId) => {
+        const inputElement = document.getElementById(inputId);
+        const valueElement = document.getElementById(valueId);        
+    };
     // Update the location display if the city and state are available
     if (city && state) {
         updateLocationDisplay(city, state);
@@ -547,9 +567,8 @@ window.addEventListener('DOMContentLoaded', async (event) => {
 
     Enter ZIP code: <input type="text" id="zipCodeInput" />
     <button onclick="handleZipCode()">Get Winds</button>
-    <div id="locationDisplay" class="location-info">
-        <!-- City and state will be displayed here -->
-    </div>
+    <!-- Add this line somewhere in your HTML body where you want the location to appear -->
+<p id="locationDisplay">Location: <span id="cityDisplay"></span>, <span id="stateDisplay"></span></p>
     <div id="tableContainer" class="table-scrollable">
         <!-- The table will be dynamically inserted here via JavaScript -->
     </div>
