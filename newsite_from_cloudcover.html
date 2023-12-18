@@ -108,6 +108,7 @@ th {
         }
     </style>
 </head>
+
 <body>
     
     <button id="toggleButton">Toggle Wind/Clouds</button>
@@ -143,6 +144,10 @@ th {
 
 
 <script>
+    // Initialize global threshold variables
+const lowWindThreshold = 7;
+const medWindThreshold = 15;
+const highWindThreshold = 20;
     // Declare this at the top to store the initial view
 
 let globalWeatherData = {};
@@ -489,9 +494,11 @@ function fillTableWithWindSpeed(table, weatherData) {
             // Start a new row with the label
             tableHtml += `<tr><th class="sticky-header">${feetOrhPa === 10 ? '33 ft' : feetOrhPa === 180 ? '590 ft' : `${hPaToFeet(feetOrhPa)} ft`}</th>`;
 
-            weatherData.hourly[windSpeedKey].forEach(windSpeed => {
+                weatherData.hourly[windSpeedKey].forEach(windSpeed => {
                 const roundedWindSpeed = windSpeed !== null ? Math.round(windSpeed) : 'N/A';
-                tableHtml += `<td class="data-cell">${roundedWindSpeed}</td>`;
+                // Get the background and text color based on the wind speed
+                const { backgroundColor, textColor } = getWindSpeedColor(roundedWindSpeed);
+                tableHtml += `<td class="data-cell" style="background-color: ${backgroundColor}; color: ${textColor};">${roundedWindSpeed}</td>`;
             });
 
             // Close the table row
@@ -501,6 +508,84 @@ function fillTableWithWindSpeed(table, weatherData) {
 
     // Finally, set the table's HTML to the newly created rows
     table.innerHTML = tableHtml;
+}
+// Helper function to get the background color based on the wind speed
+function getWindSpeedColor(windSpeed) {
+    let backgroundColorRGB;
+    let textColor = 'black'; // Default text color
+
+    if (windSpeed === 'N/A') {
+        backgroundColorRGB = {r: 255, g: 255, b: 255}; // White background
+        textColor = 'black';
+    } else if (windSpeed <= lowWindThreshold) {
+        backgroundColorRGB = {r: 0, g: 0, b: 255}; // Blue background
+    } else if (windSpeed >= highWindThreshold) {
+        backgroundColorRGB = {r: 255, g: 0, b: 0}; // Red background
+    } else if (windSpeed <= medWindThreshold) {
+        // Interpolating blue to green
+        backgroundColorRGB = interpolateColorRGB('blue', 'green', (windSpeed - lowWindThreshold) / (medWindThreshold - lowWindThreshold));
+    } else {
+        // Interpolating green to red
+        backgroundColorRGB = interpolateColorRGB('green', 'red', (windSpeed - medWindThreshold) / (highWindThreshold - medWindThreshold));
+    }
+    function isColorDark(r, g, b) {
+    // Calculate the luminance of the color using the approximate formula:
+    // luminance = 0.299*R + 0.587*G + 0.114*B
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+    // If luminance is less than 128, we will consider the color to be "dark"
+    return luminance < 128;
+}
+    // Set text color to white if background is dark
+    if (isColorDark(backgroundColorRGB.r, backgroundColorRGB.g, backgroundColorRGB.b)) {
+        textColor = 'white';
+    }
+
+    // Return the color in CSS rgb() format
+    const backgroundColor = `rgb(${backgroundColorRGB.r}, ${backgroundColorRGB.g}, ${backgroundColorRGB.b})`;
+    return { backgroundColor, textColor };
+}
+
+// Modify interpolate to return an object
+function interpolateColorRGB(color1, color2, percentage) {
+    // Predefined colors as rgb values
+    const colors = {
+        blue: { r: 0, g: 0, b: 255 },
+        green: { r: 0, g: 255, b: 0 },
+        red: { r: 255, g: 0, b: 0 }
+    };
+    
+    // Start and end colors as rgb objects
+    const startColor = colors[color1];
+    const endColor = colors[color2];
+
+    // Make sure the color names are valid
+    if (!startColor || !endColor) {
+        throw new Error(`Invalid color names: "${color1}" or "${color2}"`);
+    }
+
+    // Interpolate each color channel
+    const r = Math.round(startColor.r + (endColor.r - startColor.r) * percentage);
+    const g = Math.round(startColor.g + (endColor.g - startColor.g) * percentage);
+    const b = Math.round(startColor.b + (endColor.b - startColor.b) * percentage);
+
+    // Return the interpolated color as an object
+    return { r, g, b };
+}
+
+// Function to interpolate between two colors based on a percentage (0 to 1)
+function interpolateColor(color1, color2, percentage) {
+    // Function will use basic color interpolation between blue, green, and red
+    const colors = { blue: [0, 0, 255], green: [0, 255, 0], red: [255, 0, 0] };
+    const startColor = colors[color1];
+    const endColor = colors[color2];
+
+    // Interpolate each color channel
+    const r = Math.round(startColor[0] + (endColor[0] - startColor[0]) * percentage);
+    const g = Math.round(startColor[1] + (endColor[1] - startColor[1]) * percentage);
+    const b = Math.round(startColor[2] + (endColor[2] - startColor[2]) * percentage);
+
+    // Return the interpolated color in CSS rgb() format
+    return `rgb(${r}, ${g}, ${b})`;
 }
 
 function fillTableWithCloudCover(table, weatherData) {
