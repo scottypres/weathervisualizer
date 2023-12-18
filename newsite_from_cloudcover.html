@@ -6,7 +6,28 @@
     <title>Data Collection</title>
     <style>
         /* Add a general header class to apply common header styles across tables */
-.column-header {
+        #autocomplete-list {
+    position: absolute;
+    background: #fff;
+    border: 1px solid #d4d4d4;
+    z-index: 99;
+  }
+
+  #autocomplete-list div {
+    padding: 10px;
+    cursor: pointer;
+  }
+
+  #autocomplete-list div:hover {
+    background-color: #e9e9e9;
+  }
+        .wind-arrow {
+    display: inline-block;
+    transform-origin: center;
+    font-size: 14px;
+    /* Additional styling here if needed */
+}
+        .column-header {
     white-space: nowrap;
     background-color: white;
     text-align: center;
@@ -16,6 +37,138 @@
 }
 
 /* Add a general data cell class to apply common data cell styles */
+wind-arrow.rotate-0 {
+  transform: rotate(0deg);
+}
+
+.wind-arrow.rotate-11-25 {
+  transform: rotate(11.25deg);
+}
+
+.wind-arrow.rotate-22-50 {
+  transform: rotate(22.50deg);
+}
+
+.wind-arrow.rotate-33-75 {
+  transform: rotate(33.75deg);
+}
+
+.wind-arrow.rotate-45 {
+  transform: rotate(45deg);
+}
+
+.wind-arrow.rotate-56-25 {
+  transform: rotate(56.25deg);
+}
+
+.wind-arrow.rotate-67-50 {
+  transform: rotate(67.50deg);
+}
+
+.wind-arrow.rotate-78-75 {
+  transform: rotate(78.75deg);
+}
+
+.wind-arrow.rotate-90 {
+  transform: rotate(90deg);
+}
+
+.wind-arrow.rotate-101-25 {
+  transform: rotate(101.25deg);
+}
+
+.wind-arrow.rotate-112-50 {
+  transform: rotate(112.50deg);
+}
+
+.wind-arrow.rotate-123-75 {
+  transform: rotate(123.75deg);
+}
+
+.wind-arrow.rotate-135 {
+  transform: rotate(135deg);
+}
+
+.wind-arrow.rotate-146-25 {
+  transform: rotate(146.25deg);
+}
+
+.wind-arrow.rotate-157-50 {
+  transform: rotate(157.50deg);
+}
+
+.wind-arrow.rotate-168-75 {
+  transform: rotate(168.75deg);
+}
+
+.wind-arrow.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.wind-arrow.rotate-191-25 {
+  transform: rotate(191.25deg);
+}
+
+.wind-arrow.rotate-202-50 {
+  transform: rotate(202.50deg);
+}
+
+.wind-arrow.rotate-213-75 {
+  transform: rotate(213.75deg);
+}
+
+.wind-arrow.rotate-225 {
+  transform: rotate(225deg);
+}
+
+.wind-arrow.rotate-236-25 {
+  transform: rotate(236.25deg);
+}
+
+.wind-arrow.rotate-247-50 {
+  transform: rotate(247.50deg);
+}
+
+.wind-arrow.rotate-258-75 {
+  transform: rotate(258.75deg);
+}
+
+.wind-arrow.rotate-270 {
+  transform: rotate(270deg);
+}
+
+.wind-arrow.rotate-281-25 {
+  transform: rotate(281.25deg);
+}
+
+.wind-arrow.rotate-292-50 {
+  transform: rotate(292.50deg);
+}
+
+.wind-arrow.rotate-303-75 {
+  transform: rotate(303.75deg);
+}
+
+.wind-arrow.rotate-315 {
+  transform: rotate(315deg);
+}
+
+.wind-arrow.rotate-326-25 {
+  transform: rotate(326.25deg);
+}
+
+.wind-arrow.rotate-337-50 {
+  transform: rotate(337.50deg);
+}
+
+.wind-arrow.rotate-348-75 {
+  transform: rotate(348.75deg);
+}
+
+.wind-arrow.rotate-360 {
+  transform: rotate(360deg);
+}
+
 .data-cell {
     text-align: center;
     white-space: nowrap;
@@ -84,7 +237,17 @@ th span {
     white-space: nowrap; /* Keep text on the same line */
 }
 
+.wind-arrow {
+    display: inline-block;
+    transform-origin: 50% 50%;
+}
+@for $i from 0 through 348 {
+  $degrees: $i * 11.25;
 
+  .wind-arrow.rotate-#{$degrees} {
+    transform: rotate(#{$degrees}deg);
+  }
+}
 /* Updated CSS rule for first-column cells under `tbody` to inherit the width */
 td:first-child {
     position: sticky;
@@ -111,6 +274,11 @@ th {
 
 <body>
     
+    <div id="zipcode-section">
+        <label for="zipcodeInput">Enter Zipcode:</label>
+        <input type="text" id="zipcodeInput" placeholder="Enter zipcode">
+        <button id="fetchCoordinatesButton">Get Weather</button>
+    </div>
     <button id="toggleButton">Toggle Wind/Clouds</button>
     <!-- ICON Table -->
     <div id="configPopup" class="config-popup" style="display: none;">
@@ -144,6 +312,10 @@ th {
 
 
 <script>
+    let userLocation = {
+    latitude: 26.4187,   // Use a default latitude or prompt the user to enter a valid one.
+    longitude: 81.4173,  // Use a default longitude or prompt the user to enter a valid one.
+};
     // Initialize global threshold variables
 const lowWindThreshold = 7;
 const medWindThreshold = 15;
@@ -151,7 +323,17 @@ const highWindThreshold = 20;
     // Declare this at the top to store the initial view
 
 let globalWeatherData = {};
-// Function to convert hPa to feet
+
+function getWindArrowClass(degrees) {
+    // Normalize the degrees to ensure it is between 0 and 360
+    degrees = degrees % 360;
+    // Round the degrees to the nearest 11.25 increment
+    const roundedDegrees = Math.round(degrees / 11.25) * 11.25;
+    // Replace dot with a dash for CSS class compatibility
+    const classDegrees = roundedDegrees.toFixed(2).replace('.', '-');
+    // Return the CSS class for the wind arrow rotation
+    return 'wind-arrow rotate-' + classDegrees;
+}
 function initialTableSetup() {
     Object.keys(globalWeatherData).forEach(model => {
         const tableId = `${model.toLowerCase()}-table`;
@@ -159,8 +341,27 @@ function initialTableSetup() {
         fillTableWithWindSpeed(dataTable, globalWeatherData[model]); // Show winds data first
         dataTable.dataset.showing = 'winds'; // Indicate that winds are being shown
     });
-
     updateToggleButton(); // Ensure the toggle button text is set correctly
+}
+
+// Fetch data for each model
+const baseUrls = {
+    openMeteo: 'https://api.open-meteo.com/v1/forecast',
+    gfs: 'https://api.open-meteo.com/v1/gfs',
+    icon: 'https://api.open-meteo.com/v1/dwd-icon'
+};
+let fetchedModelsCount = 0; // Variable to keep track of the completed fetches
+for (const [model, baseUrl] of Object.entries(baseUrls)) {
+    checkAndFetchData(baseUrl, model).catch(error => {
+        console.error(`Failed to fetch data for model "${model}":`, error);
+    }).finally(() => {
+        // Once each fetch is done, increment the counter
+        ++fetchedModelsCount;
+        // If all fetches are done, call `initialTableSetup`
+        if (fetchedModelsCount === Object.keys(baseUrls).length) {
+            initialTableSetup();
+        }
+    });
 }
 function hPaToFeet(hPa) {
     const conversionTable = {
@@ -181,13 +382,58 @@ function hPaToFeet(hPa) {
     const feet = meters * 3.28084; // Convert meters to feet
     return Math.round(feet);
 }
+
 document.querySelectorAll('table[id$="-table"]').forEach(table => {
     table.dataset.showing = 'winds'; // Start with winds data shown
 });
+document.getElementById('fetchCoordinatesButton').addEventListener('click', function() {
+    const zipcode = document.getElementById('zipcodeInput').value;
+    if (zipcode) {
+        getCoordinatesByZipcode(zipcode);
+    } else {
+        alert('Please enter a valid zipcode.');
+    }
+});
+
+
+
+
+
+async function getCoordinatesByZipcode(zipcode) {
+    const zipApiUrl = `https://api.zippopotam.us/us/${zipcode}`;
+    try {
+        const response = await fetch(zipApiUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data && data.places.length > 0) {
+            // Update the global location variable
+            userLocation = {
+                latitude: parseFloat(data.places[0].latitude),
+                longitude: parseFloat(data.places[0].longitude)
+            };
+            console.log('Coordinates:', userLocation);
+
+            // Now call the API with these coordinates for each model and update the table with new data
+            for (const model of Object.keys(baseUrls)) {
+                await checkAndFetchData(baseUrls[model], model);
+            }
+            initialTableSetup(); // Refresh the table setup
+
+        } else {
+            alert('No coordinates found for the provided zipcode.');
+        }
+    } catch (error) {
+        console.error('Failed to fetch coordinates:', error);
+        alert('Failed to get coordinates. Please check the zipcode and try again.');
+    }
+}
+
 async function checkAndFetchData(baseUrl, model) {
     const commonParameters = [
         'temperature_2m','temperature_80m','temperature_180m',
-        'weather_code',
+        'weather_code','relative_humidity_2m',
         'dew_point_2m',
         'cloud_cover',
         'cloud_cover_low',
@@ -251,16 +497,12 @@ async function checkAndFetchData(baseUrl, model) {
         'cape'
     ].join(',');
 
-    const location = {
-        latitude: 52.52,
-        longitude: 13.41
-    };
     
     const units = '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch';
 
     // Combine base URL, location, parameters, and units into a single API call
     try {
-        const response = await fetch(`${baseUrl}?latitude=${location.latitude}&longitude=${location.longitude}&hourly=${commonParameters}${units}`);
+        const response = await fetch(`${baseUrl}?latitude=${userLocation.latitude}&longitude=${userLocation.longitude}&hourly=${commonParameters}${units}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -276,25 +518,7 @@ async function checkAndFetchData(baseUrl, model) {
     }
 }
 
-// Initialize and fetch data for each model
-const baseUrls = {
-    openMeteo: 'https://api.open-meteo.com/v1/forecast',
-    gfs: 'https://api.open-meteo.com/v1/gfs',
-    icon: 'https://api.open-meteo.com/v1/dwd-icon'
-};
-let fetchedModelsCount = 0; // Variable to keep track of the completed fetches
-for (const [model, baseUrl] of Object.entries(baseUrls)) {
-    checkAndFetchData(baseUrl, model).catch(error => {
-        console.error(`Failed to fetch data for model "${model}":`, error);
-    }).finally(() => {
-        // Once each fetch is done, increment the counter
-        ++fetchedModelsCount;
-        // If all fetches are done, call `initialTableSetup`
-        if (fetchedModelsCount === Object.keys(baseUrls).length) {
-            initialTableSetup();
-        }
-    });
-}
+
 
 
 
@@ -365,15 +589,7 @@ function createTable(tableId, weatherData, model) {
     dataTable.innerHTML = tableHtml;
     
 
-    // Add event listeners after the table has been populated
-    timestamps.forEach((timestamp, index) => {
-        const headerElement = dataTable.querySelector(`th:nth-child(${index + 2})`); // +2 to skip model header cell
-        if (headerElement) {
-            headerElement.addEventListener('click', () => {
-                displayDataAtIndex(weatherData, index);
-            });
-        }
-    });
+   
 
     dataTable.dataset.model = model;
     console.log(`Listeners added for ${model} model`);
@@ -428,15 +644,13 @@ function displayDataAtIndex(weatherData, index) {
     
     // Display the alert without visibility data for ICON model
     alert(
-        `Timestamp: ${weatherData.hourly.time[index]}\n` +
-        `Total Cloud Cover: ${dataForTimestamp.totalCloudCover}%\n` +
-        `Low Cloud Cover: ${dataForTimestamp.lowCloudCover}%\n` +
-        `Mid Cloud Cover: ${dataForTimestamp.midCloudCover}%\n` +
-        `High Cloud Cover: ${dataForTimestamp.highCloudCover}%\n` +
-        `Temperature: ${dataForTimestamp.temperature}°\n` +
-        `Dewpoint: ${dataForTimestamp.dewpoint}°\n` +
-        `Temp-Dewpoint Spread: ${tempDewpointSpread}°\n` 
-        
+        `Date: ${dateFormatted} (${dayOfWeek})\n` + // Format change here
+        `Conditions: ${weatherDescription}\n` +      // Substituted description here
+        `Temperature: ${temperature}°\n` +
+        `CAPE: ${cape}\n` +
+        `Relative Humidity: ${relativeHumidity}%\n` +
+        `Dewpoint: ${dewpoint}°\n` +
+        `Temp-Dewpoint Spread: ${tempDewpointSpread}°\n`
     );
 }
 document.getElementById('toggleButton').addEventListener('click', toggleWindClouds);
@@ -462,43 +676,54 @@ function toggleWindClouds() {
 }
 
 function updateToggleButton() {
-    const table = document.querySelector('table'); // Assuming if one table shows winds, they all do
-    const isShowingWinds = table && table.dataset.showing === 'winds';
+    // Assuming if one table shows winds, they all do
+    const table = document.querySelector('table[id$="-table"]');
+    const isShowingWinds = table.dataset.showing === 'winds';
+    // Set the button text based on whether winds or clouds are currently being shown
     document.getElementById('toggleButton').textContent = isShowingWinds ? 'Show Clouds' : 'Show Winds';
 }
+
+// Call this function to set the initial state of the button
+updateToggleButton();
 function fillTableWithWindSpeed(table, weatherData) {
     let tableHtml = '<tr>' + table.getElementsByTagName('tr')[0].innerHTML + '</tr>';
-    const altitudeLabels = [10, 180, 1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400].reverse();
+    const altitudeLabels = [10, 80, 180, 1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400].reverse();
 
     altitudeLabels.forEach(feetOrhPa => {
-        let windSpeedKey;
+        let windSpeedKey, windDirectionKey;
         
         if(feetOrhPa === 10) {
             windSpeedKey = 'wind_speed_10m';
+            windDirectionKey = 'wind_direction_10m';
+        } else if(feetOrhPa === 80) {
+            windSpeedKey = 'wind_speed_80m';
+            windDirectionKey = 'wind_direction_80m';
         } else if(feetOrhPa === 180) {
             windSpeedKey = 'wind_speed_180m';
+            windDirectionKey = 'wind_direction_180m';
         } else {
             windSpeedKey = `windspeed_${feetOrhPa}hPa`;
+            windDirectionKey = `winddirection_${feetOrhPa}hPa`;
         }
 
-        // Check if data exists for this particular altitude
-        if(weatherData.hourly.hasOwnProperty(windSpeedKey)) {
-            // Check if all data points are missing for this altitude
-            const allDataMissing = weatherData.hourly[windSpeedKey].every(speed => speed === null);
-
-            if(allDataMissing) {
-                // Skip this iteration if all data points are missing
-                return;
-            }
-
-            // Start a new row with the label
+        // Check if wind data exists for this particular elevation
+        if(weatherData.hourly.hasOwnProperty(windSpeedKey) && weatherData.hourly.hasOwnProperty(windDirectionKey)) {
             tableHtml += `<tr><th class="sticky-header">${feetOrhPa === 10 ? '33 ft' : feetOrhPa === 180 ? '590 ft' : `${hPaToFeet(feetOrhPa)} ft`}</th>`;
 
-                weatherData.hourly[windSpeedKey].forEach(windSpeed => {
+            // Iterate over wind speeds and directions together
+            weatherData.hourly[windSpeedKey].forEach((windSpeed, idx) => {
+                const windDirection = weatherData.hourly[windDirectionKey][idx];
+                const windArrowClass = getWindArrowClass(windDirection);
                 const roundedWindSpeed = windSpeed !== null ? Math.round(windSpeed) : 'N/A';
+                
                 // Get the background and text color based on the wind speed
                 const { backgroundColor, textColor } = getWindSpeedColor(roundedWindSpeed);
-                tableHtml += `<td class="data-cell" style="background-color: ${backgroundColor}; color: ${textColor};">${roundedWindSpeed}</td>`;
+                
+                // Add wind speed and a Unicode arrow for wind direction with the proper rotation
+                tableHtml += `<td class="data-cell" style="background-color: ${backgroundColor}; color: ${textColor};">
+                                <div>${roundedWindSpeed}</div>
+                                <div class="${windArrowClass}">&#8593;</div>
+                              </td>`; // Replace &#8593; with the correct Unicode arrow character you want to use
             });
 
             // Close the table row
@@ -508,6 +733,48 @@ function fillTableWithWindSpeed(table, weatherData) {
 
     // Finally, set the table's HTML to the newly created rows
     table.innerHTML = tableHtml;
+ // Add event listeners to the wind table headers for displaying wind data
+ const headers = table.querySelectorAll('th'); // Get all headers
+    headers.forEach((header, index) => {
+        if (index > 0) { // Skip the first header, corresponding to the altitude label
+            header.addEventListener('click', () => {
+                displayWindDataAtIndex(weatherData, index - 1); // Adjust index for correct data
+            });
+        }
+    });
+}
+function displayWindDataAtIndex(weatherData, index) {
+    // Convert the timestamp to a readable date and day of the week
+    const timestamp = weatherData.hourly.time && weatherData.hourly.time.length > index ? weatherData.hourly.time[index] : 'N/A';
+    const date = timestamp !== 'N/A' ? new Date(timestamp) : 'N/A';
+    const dateFormatted = date !== 'N/A' ? date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+    const dayOfWeek = date !== 'N/A' ? date.toLocaleDateString('en-US', { weekday: 'long' }) : 'N/A';
+
+    // Retrieve the required data from the weather data object, or show "N/A"
+    const getWeatherDataValue = (key) => {
+        return weatherData.hourly[key] && weatherData.hourly[key].length > index ? weatherData.hourly[key][index] : 'N/A';
+    };
+
+    const weatherCode = getWeatherDataValue('weather_code');
+    const temperature = getWeatherDataValue('temperature_2m');
+    const cape = getWeatherDataValue('cape');
+    const relativeHumidity = getWeatherDataValue('relative_humidity_2m');
+    const dewpoint = getWeatherDataValue('dew_point_2m');
+
+    // Calculate the spread if both temperature and dewpoint are available
+    let tempDewpointSpread = temperature !== 'N/A' && dewpoint !== 'N/A' ? (temperature - dewpoint).toFixed(2) : 'N/A';
+
+    // Display the alert with the collected data
+    alert(
+        `Date: ${dateFormatted}\n` +
+        `Day: ${dayOfWeek}\n` +
+    
+        `Temperature: ${temperature}°\n` +
+        `CAPE: ${cape}\n` +
+        `Relative Humidity: ${relativeHumidity}%\n` +
+        `Dewpoint: ${dewpoint}°\n` +
+        `Temp-Dewpoint Spread: ${tempDewpointSpread}°\n`
+    );
 }
 // Helper function to get the background color based on the wind speed
 function getWindSpeedColor(windSpeed) {
@@ -637,6 +904,7 @@ function getWindDirectionArrow(degrees) {
 // Update the button text at the initial setup section of your script:
 document.getElementById('toggleButton').textContent = 'Toggle Clouds';
 updateToggleButton();
+
 </script>
 
 </body>
