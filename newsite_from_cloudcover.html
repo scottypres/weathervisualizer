@@ -369,7 +369,23 @@ function createTable(tableId, weatherData, model) {
     dataTable.dataset.model = model;
     console.log(`Listeners added for ${model} model`);
 }
+document.addEventListener('click', function(event) {
+    let target = event.target; // this is the clicked element
 
+    // Check if the clicked element is a header in any of the tables, and it's not the first header as it represents the model name
+    if (target.nodeName === 'TH' && target.cellIndex > 0) {
+        let tableId = target.closest('table').id;
+        let model = tableId.replace('-table', '');
+        
+        // Get the index of the header (ignoring the first header cell of the model name)
+        let index = Array.from(target.parentNode.children).indexOf(target) - 1;
+        
+        // Invoke the function to show popup with the corresponding data
+        if (index > -1 && globalWeatherData.hasOwnProperty(model)) {
+            displayDataAtIndex(globalWeatherData[model], index);
+        }
+    }
+});
 function displayDataAtIndex(weatherData, index) {
     console.log('Index:', index);
     console.log('weatherData at Index:', weatherData.hourly.time[index]);
@@ -435,58 +451,48 @@ function toggleWindClouds() {
     
     updateToggleButton();
 }
+
 function updateToggleButton() {
     const table = document.querySelector('table'); // Assuming if one table shows winds, they all do
     const isShowingWinds = table && table.dataset.showing === 'winds';
     document.getElementById('toggleButton').textContent = isShowingWinds ? 'Show Clouds' : 'Show Winds';
 }
 function fillTableWithWindSpeed(table, weatherData) {
-    // First, let's get the header row from the current HTML table since we are not modifying the header
     let tableHtml = '<tr>' + table.getElementsByTagName('tr')[0].innerHTML + '</tr>';
-
-    // Define an array for altitude labels - for 10 and 180 meters, we'll handle them separately in feet
-    // The rest are hPa values from the `altitudeLabels` originally provided in the script
     const altitudeLabels = [10, 180, 1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400].reverse();
 
-    // Iterate over each altitude label
     altitudeLabels.forEach(feetOrhPa => {
-        let altLabel;
         let windSpeedKey;
-
-        // Determine the correct label and key for each altitude
-        switch (feetOrhPa) {
-            case 10: // 10 meters as 33 feet
-                altLabel = '33 ft';
-                windSpeedKey = 'wind_speed_10m'; // Actual API key for wind speed at 10 meters
-                break;
-            case 180: // 180 meters as 590 feet
-                altLabel = '590 ft';
-                windSpeedKey = 'wind_speed_180m'; // Actual API key for wind speed at 180 meters
-                break;
-            default:
-                // Convert hPa to feet for remaining altitudes
-                const feet = hPaToFeet(feetOrhPa); // use your conversion function for hPa values
-                altLabel = `${feet} ft`;
-                windSpeedKey = `windspeed_${feetOrhPa}hPa`; // Construct the key based on hPa value for wind speed
-                break;
+        
+        if(feetOrhPa === 10) {
+            windSpeedKey = 'wind_speed_10m';
+        } else if(feetOrhPa === 180) {
+            windSpeedKey = 'wind_speed_180m';
+        } else {
+            windSpeedKey = `windspeed_${feetOrhPa}hPa`;
         }
 
-        tableHtml += `<tr><th class="sticky-header">${altLabel}</th>`;
+        // Check if data exists for this particular altitude
+        if(weatherData.hourly.hasOwnProperty(windSpeedKey)) {
+            // Check if all data points are missing for this altitude
+            const allDataMissing = weatherData.hourly[windSpeedKey].every(speed => speed === null);
 
-        // Check if the key exists in the hourly data
-        if (weatherData.hourly.hasOwnProperty(windSpeedKey)) {
+            if(allDataMissing) {
+                // Skip this iteration if all data points are missing
+                return;
+            }
+
+            // Start a new row with the label
+            tableHtml += `<tr><th class="sticky-header">${feetOrhPa === 10 ? '33 ft' : feetOrhPa === 180 ? '590 ft' : `${hPaToFeet(feetOrhPa)} ft`}</th>`;
+
             weatherData.hourly[windSpeedKey].forEach(windSpeed => {
-                // Use rounded wind speed if available, otherwise show 'N/A'
                 const roundedWindSpeed = windSpeed !== null ? Math.round(windSpeed) : 'N/A';
                 tableHtml += `<td class="data-cell">${roundedWindSpeed}</td>`;
             });
-        } else {
-            // If the data for this altitude isn't available, span the cell across all time slots
-            tableHtml += `<td colspan="${weatherData.hourly.time.length}" class="data-cell">Data not available</td>`;
-        }
 
-        // Close the table row
-        tableHtml += '</tr>';
+            // Close the table row
+            tableHtml += '</tr>';
+        }
     });
 
     // Finally, set the table's HTML to the newly created rows
