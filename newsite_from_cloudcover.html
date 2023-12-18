@@ -109,9 +109,20 @@ th {
     </style>
 </head>
 <body>
+    
     <button id="toggleButton">Toggle Wind/Clouds</button>
     <!-- ICON Table -->
-
+    <div id="configPopup" class="config-popup" style="display: none;">
+        <div class="config-content">
+            <label for="blueThreshold">Blue Threshold (mph)</label>
+            <input type="number" id="blueThreshold" value="4" min="0" /><br/>
+            <label for="greenThreshold">Green Threshold (mph)</label>
+            <input type="number" id="greenThreshold" value="12" min="1" /><br/>
+            <label for="redThreshold">Red Threshold (mph)</label>
+            <input type="number" id="redThreshold" value="20" min="2" /><br/>
+            <button id="submitThresholds">Submit</button>
+        </div>
+    </div>
 
     <!-- OpenMeteo Table -->
     <table id="openmeteo-table">
@@ -132,10 +143,19 @@ th {
 
 
 <script>
-    // Global variable to store weather data
+    // Declare this at the top to store the initial view
+
 let globalWeatherData = {};
 // Function to convert hPa to feet
+function initialTableSetup() {
+    Object.keys(globalWeatherData).forEach(model => {
+        const tableId = `${model.toLowerCase()}-table`;
+        const dataTable = document.getElementById(tableId);
+        fillTableWithCloudCover(dataTable, globalWeatherData[model]);
+    });
 
+    updateToggleButton();
+}
 function hPaToFeet(hPa) {
     const conversionTable = {
         1000: 110,
@@ -253,10 +273,17 @@ const baseUrls = {
     gfs: 'https://api.open-meteo.com/v1/gfs',
     icon: 'https://api.open-meteo.com/v1/dwd-icon'
 };
-
+let fetchedModelsCount = 0; // Variable to keep track of the completed fetches
 for (const [model, baseUrl] of Object.entries(baseUrls)) {
     checkAndFetchData(baseUrl, model).catch(error => {
         console.error(`Failed to fetch data for model "${model}":`, error);
+    }).finally(() => {
+        // Once each fetch is done, increment the counter
+        ++fetchedModelsCount;
+        // If all fetches are done, call `initialTableSetup`
+        if (fetchedModelsCount === Object.keys(baseUrls).length) {
+            initialTableSetup();
+        }
     });
 }
 
@@ -307,6 +334,7 @@ function createTable(tableId, weatherData, model) {
     });
 
     dataTable.innerHTML = tableHtml;
+    
 
     // Add event listeners after the table has been populated
     timestamps.forEach((timestamp, index) => {
@@ -369,13 +397,12 @@ function displayDataAtIndex(weatherData, index) {
 document.getElementById('toggleButton').addEventListener('click', toggleWindClouds);
 document.getElementById('toggleButton').textContent = 'Show Winds'; // Default text
 function toggleWindClouds() {
-    const toggleButtonText = document.getElementById('toggleButton').textContent;
-    const showWinds = toggleButtonText === 'Show Winds';
     Object.keys(globalWeatherData).forEach(model => {
         const tableId = `${model.toLowerCase()}-table`;
         const dataTable = document.getElementById(tableId);
-
-        if (showWinds) {
+        const currentDisplay = dataTable.dataset.showing;
+        
+        if (currentDisplay === 'clouds') {
             // Display wind data
             fillTableWithWindSpeed(dataTable, globalWeatherData[model]);
             dataTable.dataset.showing = 'winds';
@@ -385,7 +412,13 @@ function toggleWindClouds() {
             dataTable.dataset.showing = 'clouds';
         }
     });
-    document.getElementById('toggleButton').textContent = showWinds ? 'Show Clouds' : 'Show Winds';
+    
+    updateToggleButton();
+}
+function updateToggleButton() {
+    const table = document.querySelector('table'); // Assuming if one table shows winds, they all do
+    const isShowingWinds = table && table.dataset.showing === 'winds';
+    document.getElementById('toggleButton').textContent = isShowingWinds ? 'Show Clouds' : 'Show Winds';
 }
 function fillTableWithWindSpeed(table, weatherData) {
     const altitudeLabels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400];
@@ -420,6 +453,8 @@ function fillTableWithWindSpeed(table, weatherData) {
 
 function fillTableWithCloudCover(table, weatherData) {
     const model = table.dataset.model;
+    // Update showing attribute here
+    table.dataset.showing = 'clouds';
     createTable(table.id, weatherData, model); // Reuse createTable function
 }
 // Initialize the tables to display clouds by default
@@ -462,8 +497,9 @@ function getWindDirectionArrow(degrees) {
     }
     return ''; // Return empty string if the direction does not fall within known ranges
 }
-// Set the correct initial text for the toggle button
-document.getElementById('toggleButton').textContent = 'Show Winds'; // Initial text
+// Update the button text at the initial setup section of your script:
+document.getElementById('toggleButton').textContent = 'Toggle Clouds';
+updateToggleButton();
 </script>
 </body>
 </html>
