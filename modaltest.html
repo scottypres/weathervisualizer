@@ -73,43 +73,53 @@
 
 <body>
 
-  <h2>(Location)</h2>
-  <div class="date-time">October 10, 2021, 12 PM</div>
-<div class="weather-code">(Weather Code)</div>
-  <table id="weatherDataTable" class="display">
-    <tbody>
-      <tr>
-        <td>Temperature at 2m:</td>
-        <td>65°F</td>
-        <td>3 (indicating cloudy)</td>
-        <td>Weather Code:</td>
-      </tr>
-      <tr>
-        <td>Dew Point:</td>
-        <td>60°F</td>
-        <td>20%</td>
-        <td>Cloud Cover Low:</td>
-      </tr>
-      <tr>
-        <td>Temp-Dewpoint Difference (Fog):</td>
-        <td>5°F</td>
-        <td>50%</td>
-        <td>Cloud Cover Medium:</td>
-      </tr>
-      <tr class="cloud-cover-high">
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>80%</td>
-        <td>Cloud Cover High:</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td></td>
-        <td>50%</td>
-        <td>Total Cloud Cover:</td>
-      </tr>
-    </tbody>
-  </table>
+<!-- This is the modal container (hidden by default) -->
+<div id="weatherDataPopup" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span id="closePopupButton" class="close-button">&times;</span>
+<h2>(Location)</h2>
+<div class="date-time">Date and Time:</div>
+<div class="weather-code">temperature_2m_max / temperature_2m_min</div>
+<div class="weather-code">weather_code</div>
+<div class="weather-code">Sunrise: sunrise Sunset: sunset</div>
+
+  <tbody>
+<tr>
+  <td>Temperature at 2m:</td>
+  <td>temperature_2m °F</td>
+  <td>cape</td>
+  <td>CAPE</td>
+</tr>
+<tr>
+  <td>Dew Point:</td>
+  <td>dew_point_2m °F</td>
+  <td>cloud_cover_low%</td>
+  <td>Cloud Cover Low:</td>
+</tr>
+<tr>
+  <td>Relative Humidity:</td>
+  <td>relative_humidity_2m%</td>
+  <td>cloud_cover_mid%</td>
+  <td>Cloud Cover Medium:</td>
+</tr>
+<tr class="cloud-cover-high">
+  <td>&nbsp;</td>
+  <td>&nbsp;</td>
+  <td>cloud_cover_high%</td>
+  <td>Cloud Cover High:</td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+  <td>cloud_cover%</td>
+  <td>Total Cloud Cover:</td>
+</tr>
+<div id="popupDataTableContainer"></div>
+  </div>
+</div>
+
+</tbody>
+</table>
 
   <script>
     $(document).ready(function () {

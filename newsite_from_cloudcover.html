@@ -151,10 +151,11 @@ function initialTableSetup() {
     Object.keys(globalWeatherData).forEach(model => {
         const tableId = `${model.toLowerCase()}-table`;
         const dataTable = document.getElementById(tableId);
-        fillTableWithCloudCover(dataTable, globalWeatherData[model]);
+        fillTableWithWindSpeed(dataTable, globalWeatherData[model]); // Show winds data first
+        dataTable.dataset.showing = 'winds'; // Indicate that winds are being shown
     });
 
-    updateToggleButton();
+    updateToggleButton(); // Ensure the toggle button text is set correctly
 }
 function hPaToFeet(hPa) {
     const conversionTable = {
@@ -175,6 +176,9 @@ function hPaToFeet(hPa) {
     const feet = meters * 3.28084; // Convert meters to feet
     return Math.round(feet);
 }
+document.querySelectorAll('table[id$="-table"]').forEach(table => {
+    table.dataset.showing = 'winds'; // Start with winds data shown
+});
 async function checkAndFetchData(baseUrl, model) {
     const commonParameters = [
         'temperature_2m','temperature_80m','temperature_180m',
@@ -448,7 +452,7 @@ function toggleWindClouds() {
             dataTable.dataset.showing = 'clouds';
         }
     });
-    
+
     updateToggleButton();
 }
 
@@ -549,5 +553,6 @@ function getWindDirectionArrow(degrees) {
 document.getElementById('toggleButton').textContent = 'Toggle Clouds';
 updateToggleButton();
 </script>
+
 </body>
 </html>
