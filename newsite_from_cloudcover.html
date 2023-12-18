@@ -294,16 +294,13 @@ th {
     </div>
 
     <!-- OpenMeteo Table -->
-    <table id="openmeteo-table">
+    <table id="openmeteo-table" style="margin-bottom: 20px;">
         <!-- The table will be populated by JavaScript -->
     </table>
 
     
 
-    <!-- GFS Table -->
-    <table id="gfs-table">
-        <!-- The table will be populated by JavaScript -->
-    </table>
+   
 
     <table id="icon-table">
     <!-- The table will be populated by JavaScript -->
@@ -499,22 +496,41 @@ async function checkAndFetchData(baseUrl, model) {
 
     
     const units = '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch';
+    let additionalParameters = ''; // Initialize additional parameters string
 
-    // Combine base URL, location, parameters, and units into a single API call
+    // Check the model to determine the correct forecast_days parameter
+    if (model.toLowerCase() === 'openmeteo') {
+        additionalParameters += '&forecast_days=14'; // 14-day forecast for OpenMeteo
+    } else if (model.toLowerCase() === 'icon') {
+        additionalParameters += '&forecast_days=7'; // 7-day forecast for ICON
+    }
+
+    // Adjust the API request URL to include the additional parameters for extended forecasts
+    const requestUrl = `${baseUrl}?latitude=${userLocation.latitude}&longitude=${userLocation.longitude}&hourly=${commonParameters}${units}${additionalParameters}`;
+
     try {
-        const response = await fetch(`${baseUrl}?latitude=${userLocation.latitude}&longitude=${userLocation.longitude}&hourly=${commonParameters}${units}`);
+        // Request data from the weather API using the assembled URL
+        const response = await fetch(requestUrl);
+
+        // If the response is not okay, throw an error
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! Status: ${response.status}`);
         }
+
+        // Parse the response as JSON data
         const weatherData = await response.json();
         console.log(`Data fetched successfully for model "${model}":`, weatherData);
 
-        // Call createTable to populate the table with fetched data
-        // This assumes you have a corresponding table ID and data structure for the model
+        // Populate the respective table with the fetched data
         createTable(`${model.toLowerCase()}-table`, weatherData, model);
-        globalWeatherData[model] = weatherData; // Store fetched data using model as key
+
+        // Store the fetched data using the model as the key
+        globalWeatherData[model] = weatherData;
     } catch (error) {
+        // Log the error if fetching the data fails
         console.error(`Failed to fetch data for model "${model}":`, error);
+        
+        // Optionally, handle the error in the UI, for instance, by displaying an error message to the user
     }
 }
 
@@ -550,6 +566,7 @@ function createTable(tableId, weatherData, model) {
                     <span class="small-font">${dayOfWeek}</span><br>
                     <span class="small-font">${hour12}</span><br><span class="small-font">${ampm}</span>
                   </th>`;
+                  
 });
 
 
@@ -687,28 +704,28 @@ function updateToggleButton() {
 updateToggleButton();
 function fillTableWithWindSpeed(table, weatherData) {
     let tableHtml = '<tr>' + table.getElementsByTagName('tr')[0].innerHTML + '</tr>';
-    const altitudeLabels = [10, 80, 180, 1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400].reverse();
+    const altitudeLevels = [10, 80, 1000, 180, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400].reverse(); // Order hPa values and feet values in descending order
 
-    altitudeLabels.forEach(feetOrhPa => {
+    altitudeLevels.forEach(alt => {
         let windSpeedKey, windDirectionKey;
+        let displayAltitude; // Define a variable to hold our display altitude
         
-        if(feetOrhPa === 10) {
-            windSpeedKey = 'wind_speed_10m';
-            windDirectionKey = 'wind_direction_10m';
-        } else if(feetOrhPa === 80) {
-            windSpeedKey = 'wind_speed_80m';
-            windDirectionKey = 'wind_direction_80m';
-        } else if(feetOrhPa === 180) {
-            windSpeedKey = 'wind_speed_180m';
-            windDirectionKey = 'wind_direction_180m';
+        if(alt === 10 || alt === 80 || alt === 180) {
+            // Handle the specific feet values (10m, 80m, 180m are in meters, need conversion to feet)
+            const altInFeet = Math.round(alt * 3.28084); // Convert meters to feet, rounding to the nearest whole number
+            windSpeedKey = `wind_speed_${alt}m`;
+            windDirectionKey = `wind_direction_${alt}m`;
+            displayAltitude = `${altInFeet} ft`; // Display in feet
         } else {
-            windSpeedKey = `windspeed_${feetOrhPa}hPa`;
-            windDirectionKey = `winddirection_${feetOrhPa}hPa`;
+            // Handle hPa values and convert to feet for display
+            windSpeedKey = `windspeed_${alt}hPa`;
+            windDirectionKey = `winddirection_${alt}hPa`;
+            displayAltitude = `${hPaToFeet(alt)} ft`; // Covert hPa to feet and display in feet
         }
 
         // Check if wind data exists for this particular elevation
         if(weatherData.hourly.hasOwnProperty(windSpeedKey) && weatherData.hourly.hasOwnProperty(windDirectionKey)) {
-            tableHtml += `<tr><th class="sticky-header">${feetOrhPa === 10 ? '33 ft' : feetOrhPa === 180 ? '590 ft' : `${hPaToFeet(feetOrhPa)} ft`}</th>`;
+            tableHtml += `<tr><th class="sticky-header">${displayAltitude}</th>`;
 
             // Iterate over wind speeds and directions together
             weatherData.hourly[windSpeedKey].forEach((windSpeed, idx) => {
@@ -723,7 +740,7 @@ function fillTableWithWindSpeed(table, weatherData) {
                 tableHtml += `<td class="data-cell" style="background-color: ${backgroundColor}; color: ${textColor};">
                                 <div>${roundedWindSpeed}</div>
                                 <div class="${windArrowClass}">&#8593;</div>
-                              </td>`; // Replace &#8593; with the correct Unicode arrow character you want to use
+                              </td>`;
             });
 
             // Close the table row
@@ -733,16 +750,8 @@ function fillTableWithWindSpeed(table, weatherData) {
 
     // Finally, set the table's HTML to the newly created rows
     table.innerHTML = tableHtml;
- // Add event listeners to the wind table headers for displaying wind data
- const headers = table.querySelectorAll('th'); // Get all headers
-    headers.forEach((header, index) => {
-        if (index > 0) { // Skip the first header, corresponding to the altitude label
-            header.addEventListener('click', () => {
-                displayWindDataAtIndex(weatherData, index - 1); // Adjust index for correct data
-            });
-        }
-    });
 }
+
 function displayWindDataAtIndex(weatherData, index) {
     // Convert the timestamp to a readable date and day of the week
     const timestamp = weatherData.hourly.time && weatherData.hourly.time.length > index ? weatherData.hourly.time[index] : 'N/A';
