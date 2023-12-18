@@ -177,7 +177,7 @@ function hPaToFeet(hPa) {
 }
 async function checkAndFetchData(baseUrl, model) {
     const commonParameters = [
-        'temperature_2m',
+        'temperature_2m','temperature_80m','temperature_180m',
         'weather_code',
         'dew_point_2m',
         'cloud_cover',
@@ -324,14 +324,34 @@ function createTable(tableId, weatherData, model) {
 
     // Add rows for each altitude
     altitudeLabels.forEach(hPa => {
-        const feet = hPaToFeet(hPa);
-        tableHtml += `<tr><th class="sticky-header">${feet} ft</th>`;
-        const cloudCoverKey = `cloud_cover_${hPa}hPa`;
+    // Convert hPa to feet for the display label
+    const feet = hPaToFeet(hPa);
+    
+    // Start the table row with the altitude label
+    tableHtml += `<tr><th class="sticky-header">${feet} ft</th>`;
+
+    // Presuming the weatherData variable holds your cloud cover data indexed by hPa, 
+    // e.g., `cloud_cover_1000hPa`, `cloud_cover_975hPa`, etc.
+    const cloudCoverKey = `cloud_cover_${hPa}hPa`;
+    
+    // Check if the cloud cover data exists for this altitude level
+    if (weatherData.hourly.hasOwnProperty(cloudCoverKey)) {
+        // Add a data cell for each time interval
         weatherData.hourly[cloudCoverKey].forEach(cloudCover => {
-            tableHtml += `<td class="grey-bg" style="background-color: rgba(0, 0, 0, ${cloudCover * 0.75 / 100})"></td>`;
+            // Calculate the background color based on cloud cover percentage
+            const bgColor = `rgba(0, 0, 0, ${cloudCover * 0.75 / 100})`;
+
+            // Append the data cell with styling for cloud cover
+            tableHtml += `<td class="grey-bg" style="background-color: ${bgColor}"></td>`;
         });
-        tableHtml += '</tr>';
-    });
+    } else {
+        // If cloud cover data does not exist for this pressure altitude (hPa), span across all time intervals
+        tableHtml += `<td colspan="${weatherData.hourly.time.length}" class="data-cell">Data not available</td>`;
+    }
+
+    // Close the table row
+    tableHtml += '</tr>';
+});
 
     dataTable.innerHTML = tableHtml;
     
@@ -421,34 +441,56 @@ function updateToggleButton() {
     document.getElementById('toggleButton').textContent = isShowingWinds ? 'Show Clouds' : 'Show Winds';
 }
 function fillTableWithWindSpeed(table, weatherData) {
-    const altitudeLabels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400];
-    let tableHtml = '<tr>' + table.getElementsByTagName('tr')[0].innerHTML + '</tr>'; // Clone the existing header row
+    // First, let's get the header row from the current HTML table since we are not modifying the header
+    let tableHtml = '<tr>' + table.getElementsByTagName('tr')[0].innerHTML + '</tr>';
 
-    // Ensure altitudeLabels array is reversed for the wind speed table too
-    altitudeLabels.reverse().forEach(hPa => {
-        const windSpeedKey = `windspeed_${hPa}hPa`;
-        const windDirectionKey = `winddirection_${hPa}hPa`;
-        const feet = hPaToFeet(hPa);
-        tableHtml += `<tr><th class="sticky-header">${feet} ft</th>`;
+    // Define an array for altitude labels - for 10 and 180 meters, we'll handle them separately in feet
+    // The rest are hPa values from the `altitudeLabels` originally provided in the script
+    const altitudeLabels = [10, 180, 1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400].reverse();
 
-        if (weatherData.hourly.hasOwnProperty(windSpeedKey)) {
-            weatherData.hourly[windSpeedKey].forEach((windSpeed, index) => {
-                const roundedWindSpeed = windSpeed ? Math.round(windSpeed) : 'N/A'; // Round the wind speed value
-                const windDirection = weatherData.hourly[windDirectionKey][index];
-                const windDirectionArrow = getWindDirectionArrow(windDirection); // Generate arrow using actual function call
-                tableHtml += `<td class="data-cell">` +
-             `${roundedWindSpeed}` + // Use the rounded wind speed value
-             `<br><span>${windDirectionArrow}</span>` + // Add a line break before the arrow and display using innerHTML
-             `</td>`;
-            });
-            tableHtml += '</tr>';
-        } else {
-            console.error(`Wind speed data for ${hPa} hPa not found in weather data.`);
-            tableHtml += `<td colspan="${weatherData.hourly.time.length}" class="data-cell">Data not available</td></tr>`;
+    // Iterate over each altitude label
+    altitudeLabels.forEach(feetOrhPa => {
+        let altLabel;
+        let windSpeedKey;
+
+        // Determine the correct label and key for each altitude
+        switch (feetOrhPa) {
+            case 10: // 10 meters as 33 feet
+                altLabel = '33 ft';
+                windSpeedKey = 'wind_speed_10m'; // Actual API key for wind speed at 10 meters
+                break;
+            case 180: // 180 meters as 590 feet
+                altLabel = '590 ft';
+                windSpeedKey = 'wind_speed_180m'; // Actual API key for wind speed at 180 meters
+                break;
+            default:
+                // Convert hPa to feet for remaining altitudes
+                const feet = hPaToFeet(feetOrhPa); // use your conversion function for hPa values
+                altLabel = `${feet} ft`;
+                windSpeedKey = `windspeed_${feetOrhPa}hPa`; // Construct the key based on hPa value for wind speed
+                break;
         }
+
+        tableHtml += `<tr><th class="sticky-header">${altLabel}</th>`;
+
+        // Check if the key exists in the hourly data
+        if (weatherData.hourly.hasOwnProperty(windSpeedKey)) {
+            weatherData.hourly[windSpeedKey].forEach(windSpeed => {
+                // Use rounded wind speed if available, otherwise show 'N/A'
+                const roundedWindSpeed = windSpeed !== null ? Math.round(windSpeed) : 'N/A';
+                tableHtml += `<td class="data-cell">${roundedWindSpeed}</td>`;
+            });
+        } else {
+            // If the data for this altitude isn't available, span the cell across all time slots
+            tableHtml += `<td colspan="${weatherData.hourly.time.length}" class="data-cell">Data not available</td>`;
+        }
+
+        // Close the table row
+        tableHtml += '</tr>';
     });
 
-    table.innerHTML = tableHtml; // Update the table with the new HTML
+    // Finally, set the table's HTML to the newly created rows
+    table.innerHTML = tableHtml;
 }
 
 function fillTableWithCloudCover(table, weatherData) {
